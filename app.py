@@ -6,18 +6,12 @@ Streamlit web interface for the Resume Pipeline.
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 from pathlib import Path
 
-# Put the parent directory on sys.path so `resume_pipeline` is importable as a package
-_parent = Path(__file__).parent.parent
-if str(_parent) not in sys.path:
-    sys.path.insert(0, str(_parent))
-
 import streamlit as st
 
-from resume_pipeline.pipeline import Pipeline, PipelineConfig
+from pipeline import Pipeline, PipelineConfig
 
 # ── Page config ────────────────────────────────────────────────────────────
 st.set_page_config(

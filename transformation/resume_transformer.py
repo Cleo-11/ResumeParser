@@ -18,9 +18,9 @@ This layer applies resume-writing craft:
 from __future__ import annotations
 import json
 
-from resume_pipeline.core.llm import LLMClient
-from resume_pipeline.core.logger import LayerLogger
-from resume_pipeline.core.models import (
+from core.llm import LLMClient
+from core.logger import LayerLogger
+from core.models import (
     ProjectUnderstanding,
     TransformedProject,
     ResumeBullet,

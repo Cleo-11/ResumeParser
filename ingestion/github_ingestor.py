@@ -13,8 +13,8 @@ from typing import Optional, List, Dict
 
 import requests
 
-from resume_pipeline.core.logger import LayerLogger
-from resume_pipeline.core.models import RawRepo
+from core.logger import LayerLogger
+from core.models import RawRepo
 
 GITHUB_API = "https://api.github.com"
 _log = LayerLogger("ingestion")

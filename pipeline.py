@@ -21,13 +21,13 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-from resume_pipeline.core.llm import LLMClient
-from resume_pipeline.core.logger import LayerLogger, add_handler
-from resume_pipeline.core.models import PipelineResult, EditDecision
-from resume_pipeline.ingestion.github_ingestor import ingest
-from resume_pipeline.understanding.project_analyzer import understand
-from resume_pipeline.transformation.resume_transformer import transform
-from resume_pipeline.editing.resume_editor import edit
+from core.llm import LLMClient
+from core.logger import LayerLogger, add_handler
+from core.models import PipelineResult, EditDecision
+from ingestion.github_ingestor import ingest
+from understanding.project_analyzer import understand
+from transformation.resume_transformer import transform
+from editing.resume_editor import edit
 
 _log = LayerLogger("pipeline")
 
