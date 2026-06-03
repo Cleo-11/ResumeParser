@@ -261,6 +261,14 @@ Return JSON: {{"bullet": "...", "changed": true/false, "reason": "..."}}"""
         return project.primary_bullet.text
 
 
+def _add_paragraph_safe(doc: Document, style_name: str):
+    """Add a paragraph using the requested style, falling back to Normal if it's not defined."""
+    try:
+        return doc.add_paragraph(style=style_name)
+    except KeyError:
+        return doc.add_paragraph(style="Normal")
+
+
 def _insert_bullet(doc: Document, section_idx: int, text: str, sample_style: dict) -> None:
     insert_after_idx = section_idx
     for i, para in enumerate(doc.paragraphs[section_idx + 1:], start=section_idx + 1):
@@ -271,11 +279,11 @@ def _insert_bullet(doc: Document, section_idx: int, text: str, sample_style: dic
     ref_para = doc.paragraphs[insert_after_idx]
     ref_style = _para_style_name(ref_para)
     if ref_style.startswith("heading") or _is_bold_header(ref_para):
-        style_name = "List Bullet"
+        style_name = "Normal"
     else:
-        style_name = ref_para.style.name if ref_para.style else "List Bullet"
+        style_name = ref_para.style.name if ref_para.style else "Normal"
 
-    new_para = doc.add_paragraph(style=style_name)
+    new_para = _add_paragraph_safe(doc, style_name)
     new_para._element.getparent().remove(new_para._element)
     ref_para._element.addnext(new_para._element)
 
@@ -287,7 +295,7 @@ def _insert_bullet(doc: Document, section_idx: int, text: str, sample_style: dic
 
 def _append_new_section(doc: Document, title: str, first_bullet: str, sample_style: dict) -> None:
     doc.add_heading(title, level=2)
-    para = doc.add_paragraph(style="List Bullet")
+    para = _add_paragraph_safe(doc, "List Bullet")
     run = para.add_run(first_bullet)
     if sample_style.get("size"):
         run.font.size = sample_style["size"]
