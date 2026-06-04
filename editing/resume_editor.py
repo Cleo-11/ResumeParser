@@ -262,11 +262,13 @@ Return JSON: {{"bullet": "...", "changed": true/false, "reason": "..."}}"""
 
 
 def _add_paragraph_safe(doc: Document, style_name: str):
-    """Add a paragraph using the requested style, falling back to Normal if it's not defined."""
-    try:
-        return doc.add_paragraph(style=style_name)
-    except KeyError:
-        return doc.add_paragraph(style="Normal")
+    """Add a paragraph, falling back through styles to the document default."""
+    for name in (style_name, "Normal", None):
+        try:
+            return doc.add_paragraph(style=name)
+        except KeyError:
+            continue
+    return doc.add_paragraph()
 
 
 def _insert_bullet(doc: Document, section_idx: int, text: str, sample_style: dict) -> None:
