@@ -25,6 +25,7 @@ with st.sidebar:
     st.title("⚙️ Settings")
 
     st.subheader("Credentials")
+    st.caption("Paste bare values only — not the KEY=value lines from a .env file.")
     github_username = st.text_input(
         "GitHub Username *",
         placeholder="octocat",
@@ -37,10 +38,10 @@ with st.sidebar:
     github_token = st.text_input(
         "GitHub Token (optional)",
         type="password",
+        placeholder="github_pat_...",
         help=(
-            "Personal access token — raises the GitHub rate limit from "
-            "60 req/hr (unauthenticated) to 5,000 req/hr. "
-            "Needed if you have more than ~8 repos to scan."
+            "Paste just the token value — not the full GITHUB_TOKEN=... line. "
+            "Raises the GitHub rate limit from 60 to 5,000 req/hr."
         ),
     )
 
@@ -102,6 +103,19 @@ if run_clicked:
     if missing:
         st.error(f"Please provide: {', '.join(missing)}.")
         st.stop()
+
+    # ── Sanitize inputs (guard against pasting .env lines instead of bare values) ──
+    def _extract_value(raw: str) -> str:
+        """Strip whitespace and drop a leading KEY= prefix if the user pasted a .env line."""
+        raw = raw.strip()
+        if "=" in raw.split("\n")[0]:
+            raw = raw.split("=", 1)[1].strip()
+        # Take only the first token (guards against multi-line pastes)
+        return raw.split()[0] if raw.split() else raw
+
+    github_username = _extract_value(github_username)
+    openai_key      = _extract_value(openai_key)
+    github_token    = _extract_value(github_token) if github_token else None
 
     # ── Temp file setup ────────────────────────────────────────────────────
     tmp_in = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)

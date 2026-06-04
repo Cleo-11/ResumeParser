@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Any, Optional, List, Dict
 
 from docx import Document
 from docx.shared import Pt
@@ -261,14 +261,39 @@ Return JSON: {{"bullet": "...", "changed": true/false, "reason": "..."}}"""
         return project.primary_bullet.text
 
 
-def _add_paragraph_safe(doc: Document, style_name: str):
-    """Add a paragraph, falling back through styles to the document default."""
-    for name in (style_name, "Normal", None):
-        try:
-            return doc.add_paragraph(style=name)
-        except KeyError:
-            continue
-    return doc.add_paragraph()
+def _make_raw_paragraph(text: str, sample_style: dict) -> Any:
+    """
+    Build a <w:p> element directly from XML — no style lookups, works on any DOCX.
+    Font size comes from sample_style["size"] (a Pt/Emu value) and bold from sample_style["bold"].
+    """
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    p = OxmlElement("w:p")
+    r = OxmlElement("w:r")
+
+    size = sample_style.get("size")
+    bold = sample_style.get("bold", False)
+    if size or bold:
+        rPr = OxmlElement("w:rPr")
+        if bold:
+            rPr.append(OxmlElement("w:b"))
+        if size:
+            # w:sz takes half-point values
+            half_pts = int(size.pt * 2) if hasattr(size, "pt") else int(size / 6350)
+            sz = OxmlElement("w:sz")
+            sz.set(qn("w:val"), str(half_pts))
+            szCs = OxmlElement("w:szCs")
+            szCs.set(qn("w:val"), str(half_pts))
+            rPr.append(sz)
+            rPr.append(szCs)
+        r.append(rPr)
+
+    t = OxmlElement("w:t")
+    t.text = text
+    r.append(t)
+    p.append(r)
+    return p
 
 
 def _insert_bullet(doc: Document, section_idx: int, text: str, sample_style: dict) -> None:
@@ -279,28 +304,28 @@ def _insert_bullet(doc: Document, section_idx: int, text: str, sample_style: dic
         insert_after_idx = i
 
     ref_para = doc.paragraphs[insert_after_idx]
-    ref_style = _para_style_name(ref_para)
-    if ref_style.startswith("heading") or _is_bold_header(ref_para):
-        style_name = "Normal"
-    else:
-        style_name = ref_para.style.name if ref_para.style else "Normal"
-
-    new_para = _add_paragraph_safe(doc, style_name)
-    new_para._element.getparent().remove(new_para._element)
-    ref_para._element.addnext(new_para._element)
-
-    run = new_para.add_run(text)
-    if sample_style.get("size"):
-        run.font.size = sample_style["size"]
-    run.font.bold = sample_style.get("bold", False)
+    new_p = _make_raw_paragraph(text, sample_style)
+    ref_para._element.addnext(new_p)
 
 
 def _append_new_section(doc: Document, title: str, first_bullet: str, sample_style: dict) -> None:
-    doc.add_heading(title, level=2)
-    para = _add_paragraph_safe(doc, "List Bullet")
-    run = para.add_run(first_bullet)
-    if sample_style.get("size"):
-        run.font.size = sample_style["size"]
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    # Bold heading paragraph (avoids add_heading style lookup)
+    heading_p = OxmlElement("w:p")
+    heading_r = OxmlElement("w:r")
+    heading_rPr = OxmlElement("w:rPr")
+    heading_rPr.append(OxmlElement("w:b"))
+    heading_r.append(heading_rPr)
+    heading_t = OxmlElement("w:t")
+    heading_t.text = title
+    heading_r.append(heading_t)
+    heading_p.append(heading_r)
+    doc.element.body.append(heading_p)
+
+    bullet_p = _make_raw_paragraph(first_bullet, sample_style)
+    doc.element.body.append(bullet_p)
 
 
 def _update_skills(doc: Document, new_skills: List[str], existing_text: str) -> List[str]:
